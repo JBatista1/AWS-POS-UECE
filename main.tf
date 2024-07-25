@@ -61,48 +61,67 @@ resource "aws_instance" "ubuntu" {
     }
 
     user_data     = <<-EOF
-                    #!/bin/bash
-                    echo "Hello, World! ${module.rds.rds_endpoint}" > hello.txt
-                    sudo apt-get update -y
-                    sudo apt install -y default-jre
-                    sudo apt install -y default-jdk
-                    sudo apt install -y openjdk-21-jdk
-                    sudo apt install -y maven
-                    sudo apt install -y nodejs
-                    sudo apt install -y npm
-                    sudo apt-get install screen
-                    cd /home/ubuntu
-                    git clone https://github.com/JBatista1/BE-Pos-UECE.git
-                    git clone https://github.com/JBatista1/FE-POS-UECE.git
-                    sudo chown -R ubuntu:ubuntu /home/ubuntu/BE-Pos-UECE/src/main/resources
-                    sudo chown -R ubuntu:ubuntu /home/ubuntu/FE-POS-UECE/src/routes
-                    sudo fuser -k /home/ubuntu/BE-Pos-UECE/target || true
-                    sudo rm /home/ubuntu/BE-Pos-UECE/src/main/resources/application.properties
-                    sudo rm home/ubuntu/FE-POS-UECE/src/routes/index.tsx
-                    sudo echo "server.port=8087
-                              spring.datasource.url=jdbc:postgresql://${module.rds.rds_endpoint}/postgres
-                              spring.datasource.username=postgres
-                              spring.datasource.password=postgres
-                              spring.jpa.hibernate.ddl-auto=create-drop
-                              spring.jpa.properties.hibernate.dialect=org.hibernate.dialect.PostgreSQLDialect
-                              spring.jpa.properties.hibernate.jdbc.lob.non_contextual_creation=true
-                              spring.jpa.show-sql=true
-                              logging.level.com.ead=TRACE
-                              logging.level.root=INFO
-                              logging.level.org.springframework.web=DEBUG
-                              logging.level.org.hibernate=INFO" > BE-Pos-UECE/src/main/resources/application.properties
-                    
-                    cd BE-Pos-UECE
-                    sudo mvn clean package
-                    sudo chown -R ubuntu:ubuntu /home/ubuntu/BE-Pos-UECE/target
-                    sudo chown -R ubuntu:ubuntu /home/ubuntu
-                    cd target
-                    screen -S contasapagar
-                    sudo java -jar contasAPagar-0.0.1-SNAPSHOT.jar > /home/ubuntu/contasAPagar.log 2>&1
-                    cd ../..
-
-
-                  EOF
+                      #!/bin/bash
+                      sudo apt-get update -y
+                      sudo apt install -y default-jre
+                      sudo apt install -y default-jdk
+                      sudo apt install -y openjdk-21-jdk
+                      sudo apt install -y maven
+                      sudo apt install -y nodejs
+                      sudo apt install -y npm
+                      sudo apt-get install screen
+                      cd /home/ubuntu
+                      git clone https://github.com/JBatista1/BE-Pos-UECE.git
+                      git clone https://github.com/JBatista1/FE-POS-UECE.git
+                      sudo chown -R ubuntu:ubuntu /home/ubuntu/BE-Pos-UECE/src/main/resources
+                      sudo chown -R ubuntu:ubuntu /home/ubuntu/FE-POS-UECE/src/routes
+                      sudo fuser -k /home/ubuntu/BE-Pos-UECE/target || true
+                      sudo rm /home/ubuntu/BE-Pos-UECE/src/main/resources/application.properties
+                      sudo rm /home/ubuntu/FE-POS-UECE/src/shared/environment/index.ts
+                      sudo echo "server.port=8087
+                                spring.datasource.url=jdbc:postgresql://${module.rds.rds_endpoint}/postgres
+                                spring.datasource.username=postgres
+                                spring.datasource.password=postgres
+                                spring.jpa.hibernate.ddl-auto=create-drop
+                                spring.jpa.properties.hibernate.dialect=org.hibernate.dialect.PostgreSQLDialect
+                                spring.jpa.properties.hibernate.jdbc.lob.non_contextual_creation=true
+                                spring.jpa.show-sql=true
+                                logging.level.com.ead=TRACE
+                                logging.level.root=INFO
+                                logging.level.org.springframework.web=DEBUG
+                                logging.level.org.hibernate=INFO" > BE-Pos-UECE/src/main/resources/application.properties
+                      sudo echo "
+                      export const Environment = {
+                        /**
+                        * Define a quantidade de linhas a ser carregada por padrão nas listagens
+                        */
+                        LIMITE_DE_LINHAS: 5,
+                        /**
+                        * Placeholder exibido nas inputs
+                        */
+                        INPUT_DE_BUSCA: 'Pesquisar...',
+                        /**
+                        * Texto exibido quando nenhum registro é encontrado em uma listagem
+                        */
+                        LISTAGEM_VAZIA: 'Nenhum registro encontrado.',
+                        /**
+                        * Url base de consultado dos dados dessa aplicação
+                        */
+                        URL_BASE: 'http://$(curl -s http://169.254.169.254/latest/meta-data/public-hostname):8087'
+                      };" > FE-POS-UECE/src/shared/environment/index.ts
+                      cd BE-Pos-UECE
+                      sudo mvn clean package
+                      sudo chown -R ubuntu:ubuntu /home/ubuntu/BE-Pos-UECE/target
+                      sudo chown -R ubuntu:ubuntu /home/ubuntu
+                      cd target
+                      screen -S contasapagar
+                      sudo java -jar contasAPagar-0.0.1-SNAPSHOT.jar > /home/ubuntu/contasAPagar.log 2>&1
+                      cd ../..
+                      cd FE-POS-UECE
+                      sudo npm install
+                      sudo nohup npm start > /home/ubuntu/myreactapp.log 2>&1 &
+                      echo "Hello, World!" > /home/ubuntu/hello.txt
+                    EOF
 }
 module "rds" {
     source                  = "./modules/rds"
