@@ -34,13 +34,95 @@ resource "aws_security_group" "allow_ssh" {
     protocol    = "tcp"
     cidr_blocks = ["0.0.0.0/0"]
   }
+  egress {
+    from_port   = 0
+    to_port     = 0
+    protocol    = "-1"
+    cidr_blocks = ["0.0.0.0/0"]
+  }
+}
+
+resource "aws_db_subnet_group" "default" {
+  name       = "main"
+  subnet_ids = var.subnet_ids
+
+  tags = {
+    Name = "My DB subnet group"
+  }
 }
 
 resource "aws_instance" "ubuntu" {    
     ami = data.aws_ami.ubuntu.id
-    instance_type = "t2.nano"
+    instance_type = "t2.medium"
     vpc_security_group_ids = [aws_security_group.allow_ssh.id]
+    subnet_id = var.subnet_ids[0]
     tags = {
-        Name = "servidor"
+        Name = "AWS UECE Servidor"
+    }
+
+    user_data     = <<-EOF
+                    #!/bin/bash
+                    echo "Hello, World! ${module.rds.rds_endpoint}" > hello.txt
+                    sudo apt-get update -y
+                    sudo apt install -y default-jre
+                    sudo apt install -y default-jdk
+                    sudo apt install -y openjdk-21-jdk
+                    sudo apt install -y maven
+                    sudo apt install -y nodejs
+                    sudo apt install -y npm
+                    sudo apt-get install screen
+                    cd /home/ubuntu
+                    git clone https://github.com/JBatista1/BE-Pos-UECE.git
+                    git clone https://github.com/JBatista1/FE-POS-UECE.git
+                    sudo chown -R ubuntu:ubuntu /home/ubuntu/BE-Pos-UECE/src/main/resources
+                    sudo chown -R ubuntu:ubuntu /home/ubuntu/FE-POS-UECE/src/routes
+                    sudo fuser -k /home/ubuntu/BE-Pos-UECE/target || true
+                    sudo rm /home/ubuntu/BE-Pos-UECE/src/main/resources/application.properties
+                    sudo rm home/ubuntu/FE-POS-UECE/src/routes/index.tsx
+                    sudo echo "server.port=8087
+                              spring.datasource.url=jdbc:postgresql://${module.rds.rds_endpoint}/postgres
+                              spring.datasource.username=postgres
+                              spring.datasource.password=postgres
+                              spring.jpa.hibernate.ddl-auto=create-drop
+                              spring.jpa.properties.hibernate.dialect=org.hibernate.dialect.PostgreSQLDialect
+                              spring.jpa.properties.hibernate.jdbc.lob.non_contextual_creation=true
+                              spring.jpa.show-sql=true
+                              logging.level.com.ead=TRACE
+                              logging.level.root=INFO
+                              logging.level.org.springframework.web=DEBUG
+                              logging.level.org.hibernate=INFO" > BE-Pos-UECE/src/main/resources/application.properties
+                    
+                    cd BE-Pos-UECE
+                    sudo mvn clean package
+                    sudo chown -R ubuntu:ubuntu /home/ubuntu/BE-Pos-UECE/target
+                    sudo chown -R ubuntu:ubuntu /home/ubuntu
+                    cd target
+                    screen -S contasapagar
+                    sudo java -jar contasAPagar-0.0.1-SNAPSHOT.jar > /home/ubuntu/contasAPagar.log 2>&1
+                    cd ../..
+
+
+                  EOF
+}
+module "rds" {
+    source                  = "./modules/rds"
+    region                  = "us-east-1"
+    allocated_storage       = 20
+    storage_type            = "gp2"
+    instance_class          = "db.t3.micro"
+    db_name                 = "mydatabase"
+    username                = "postgres"
+    password                = "postgres"
+    db_subnet_group_name    = aws_db_subnet_group.default.name  # Add the db_subnet_group_name attribute
+    vpc_security_group_ids  = [aws_security_group.allow_ssh.id]  # Add the vpc_security_group_ids attribute
+    tags                    = {
+        Name = "MyRDSInstance"
     }
 }
+
+output "rds_address" {
+  description = "The address of the RDS instance"
+  value       = module.rds.rds_endpoint
+}
+
+
