@@ -113,13 +113,14 @@ resource "aws_instance" "ubuntu" {
                       sudo mvn clean package
                       sudo chown -R ubuntu:ubuntu /home/ubuntu/BE-Pos-UECE/target
                       sudo chown -R ubuntu:ubuntu /home/ubuntu
+                      sudo chown -R ubuntu:ubuntu /home/ubuntu/FE-POS-UECE
                       cd target
                       screen -S contasapagar
-                      sudo java -jar contasAPagar-0.0.1-SNAPSHOT.jar > /home/ubuntu/contasAPagar.log 2>&1
+                      nohup sudo java -jar contasAPagar-0.0.1-SNAPSHOT.jar > /home/ubuntu/contasAPagar.log 2>&1 &
                       cd ../..
                       cd FE-POS-UECE
                       sudo npm install
-                      sudo nohup npm start > /home/ubuntu/myreactapp.log 2>&1 &
+                      nohup sudo npm start > /home/ubuntu/myreactapp.log 2>&1 &
                       echo "Hello, World!" > /home/ubuntu/hello.txt
                     EOF
 }
