@@ -59,7 +59,7 @@ resource "aws_instance" "ubuntu" {
     tags = {
         Name = "AWS UECE Servidor"
     }
-
+    #Criando arquivos com os paths corretos
     user_data     = <<-EOF
                       #!/bin/bash
                       sudo apt-get update -y
@@ -140,9 +140,26 @@ module "rds" {
     }
 }
 
+module "loadbalance" {
+  source                   = "./modules/loadbalance"
+  region                   = "us-east-1"
+  lb_name                  = "LoadBalance"
+  security_groups          = [aws_security_group.allow_ssh.id]
+  subnets                  = var.subnet_ids
+  enable_deletion_protection = false
+  tags                     = {
+    Name = "example-lb"
+  }
+  target_group_name        = "example-tg"
+  target_group_port        = 80
+  vpc_id                   = var.vpc_id
+  listener_port            = 80
+  instance_id              = aws_instance.ubuntu.id
+}
+
+
 output "rds_address" {
   description = "The address of the RDS instance"
   value       = module.rds.rds_endpoint
 }
-
 
